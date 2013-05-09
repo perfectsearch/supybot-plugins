@@ -10,7 +10,7 @@ from supybot.commands import *
 import supybot.plugins as plugins
 import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
-import subprocess, ConfigParser, re, os, xmpp, json
+import ConfigParser, re, os, xmpp
 import supybot.conf as conf
 import supybot.log as log
 
@@ -117,11 +117,10 @@ class XMPP(callbacks.PluginRegexp):
         #         irc.reply("Error: invalid email")
         # gchat = wrap(gchat, ['user', 'something'])
 
-    def addAlias(self, irc, msg, user, alias, config):
+    def addAlias(self, irc, msg, origuser, user, alias, config):
         if not config.has_section('Users'):
             config.add_section('Users')
         atest = self.aliasExists(alias, config)
-        log.info('atest %s, user %s' % (atest, user.name))
         if atest and atest != user.name:
             if atest == alias:
                 irc.reply("Error: You can not have an alias that is the name of a user.")
@@ -134,13 +133,20 @@ class XMPP(callbacks.PluginRegexp):
                 return False
             irc.reply("Error: You already own that alias")
             return False
-        aliases = re.findall(r"[\S]+", config.get('Users', msg.nick))
+        aliases = re.findall(r"[\S]+", config.get('Users', user.name))
         if alias in aliases:
              # We should never reach here
             return False
-        config.set('Users', msg.nick, " ".join(aliases) + " " + alias)
-        irc.reply("Your aliases: %s" % ", ".join(aliases[1:].append(alias)))
-    def removeAlias(self, irc, msg, user, alias, config):
+        config.set('Users', user.name, " ".join(aliases) + " " + alias)
+        aliases = aliases[1:]
+        aliases.append(alias)
+        log.info(str(aliases))
+        if origuser.name == user.name:
+            irc.reply("Your aliases: %s" % ", ".join(aliases))
+        else:
+            irc.reply("%s's aliases: %s" % (user.name, ", ".join(aliases)))
+        return config
+    def removeAlias(self, irc, msg, origuser, user, alias, config):
         if not config.has_section('Users'):
             config.add_section('Users')
         atest = self.aliasExists(alias, config)
@@ -149,18 +155,21 @@ class XMPP(callbacks.PluginRegexp):
             if atest == alias:
                 irc.reply("Error: You cannot remove yourself from the list. (yet)")
                 return False
-            aliases = config.get('Users', msg.nick).split(" ")
+            aliases = config.get('Users', user.name).split(" ")
             aliases.pop(aliases.index(alias))
-            irc.reply("Your aliases: %s" % ", ".join(aliases[1:]))
+            if origuser.name == user.name:
+                irc.reply("Your aliases: %s" % ", ".join(aliases[1:]))
+            else:
+                irc.reply("%s's aliases: %s" % (user.name, ", ".join(aliases[1:])))
         else:
             irc.replyError()
             return False
         if alias in aliases:
              # We should never reach here
             return False
-        config.set('Users', msg.nick, " ".join(aliases))
+        config.set('Users', user.name, " ".join(aliases))
         return config
-    def gchata(self, irc, msg, args, user, otheruser, alias):
+    def setalias(self, irc, msg, args, user, otheruser, alias):
         """(<user>) <alias>
         Set the alias for your account. Prefix your alias with a dash (-) to signify that
         you would like that alias to be removed.
@@ -172,6 +181,9 @@ class XMPP(callbacks.PluginRegexp):
         elif otheruser is not None and not user._checkCapability('owner'):
             irc.reply('Error: You are not authorized to add an alias to another user')
             return
+        if tmpUser == None:
+            irc.reply('You need to specify a valid user before you can run this command')
+            return
         # if irc.isChannel(msg.args[0]):
         #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
         try:
@@ -179,9 +191,9 @@ class XMPP(callbacks.PluginRegexp):
                 config = ConfigParser.ConfigParser()
                 config.readfp(fp)
                 if alias[0] == '-':
-                    result = self.removeAlias(irc, msg, tmpUser, alias[1:], config)
+                    result = self.removeAlias(irc, msg, user, tmpUser, alias[1:], config)
                 else:
-                    result = self.addAlias(irc, msg, tmpUser, alias, config)
+                    result = self.addAlias(irc, msg, user, tmpUser, alias, config)
                 if not result:
                     fp.close()
                     return
@@ -195,7 +207,36 @@ class XMPP(callbacks.PluginRegexp):
         except Exception, e:
             log.error(str(e)) # log.error(str(traceback.print_tb(sys.exc_info()[2])))
             irc.replyError("Error: Failed to save your alias to the config file.")
-    alias = wrap(gchata, ['user', optional('otherUser'), 'something'])
+    alias = wrap(setalias, ['user', optional('otherUser'), 'something'])
+
+    def tellall(self, irc, msg, args, autheduser, message):
+        if not (self.registryValue('telleveryone') or autheduser._checkCapability('owner')):
+            return
+        config = ConfigParser.ConfigParser()
+        config.read(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'))
+        if not config.has_section('Users'):
+            config.add_section('Users')
+        tmp = config.options('Users')
+        # TODO - use this method for sending things
+        # users = []
+        # for name in tmp:
+        #     email = config.get('Users', name)
+        #     users.append((name,email.split(" ")[:1]))
+        if users:
+            calledUsers = []
+            for user in users:
+                message2 = "%s: %s" % (msg.nick, message)
+                # status = self.sendEmail(irc, msg.nick, user[0], message2)
+                status = self.sendEmail(irc, msg.nick, user, message2)
+                if status != 0:
+                    calledUsers.append(user)
+            if calledUsers:
+                irc.reply("Failed to send your message to: %s" % ", ".join(users))
+            else:
+                irc.reply("Your message has been successfully sent to everyone!")
+        else:
+            irc.replyError()
+    tellall = wrap(tellall, ['user', 'text'])
 
     def aliasExists(self, alias, config):
         if not config.has_section('Users'):
@@ -254,6 +295,7 @@ class XMPP(callbacks.PluginRegexp):
         aliases.pop(0)
         irc.reply('Aliases: %s' % ', '.join(aliases))
     listalias = wrap(listaliases, ['otherUser'])
+    listaliases = wrap(listaliases, ['otherUser'])
 
     def nickSnarfer(self, irc, msg, match):
         r'(.*)'
