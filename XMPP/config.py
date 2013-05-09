@@ -40,7 +40,7 @@ class domainChecker(registry.String):
 		elif str == '' or str.lower() == 'none':
 			registry.String.setValue(self, '')
 			return
-		registry.String.setValue(self, match.group(0).replace('.', '\\.'))
+		registry.String.setValue(self, match.group(0))
 
 XMPP = conf.registerPlugin('XMPP')
 conf.registerChannelValue(XMPP, 'nickSnarfer',
@@ -50,6 +50,8 @@ conf.registerChannelValue(XMPP, 'nickSnarfer',
     in a channel they aren't in."""))
 conf.registerGlobalValue(XMPP, 'domain',
     domainChecker('', """restrict XMPP emails to a specific domain"""))
+conf.registerGlobalValue(XMPP, 'telleveryone',
+    registry.Boolean(False, """Allow people to use the "Tell Everyone" command"""))
 
 conf.registerGroup(XMPP, 'auth')
 conf.registerGlobalValue(XMPP.auth, 'username',
