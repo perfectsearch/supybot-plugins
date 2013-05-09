@@ -181,9 +181,9 @@ class XMPP(callbacks.PluginRegexp):
         elif otheruser is not None and not user._checkCapability('owner'):
             irc.reply('Error: You are not authorized to add an alias to another user')
             return
-        if tmpUser == None:
-            irc.reply('You need to specify a valid user before you can run this command')
-            return
+        # if tmpUser == None:
+        #     irc.reply('You need to specify a valid user before you can run this command')
+        #     return
         # if irc.isChannel(msg.args[0]):
         #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
         try:
@@ -291,11 +291,15 @@ class XMPP(callbacks.PluginRegexp):
         if not config.has_section('Users'):
             config.add_section('Users')
         tmp = config.options('Users')
-        aliases = config.get('Users', user.name).split(' ')
-        aliases.pop(0)
-        irc.reply('Aliases: %s' % ', '.join(aliases))
-    listalias = wrap(listaliases, ['otherUser'])
-    listaliases = wrap(listaliases, ['otherUser'])
+        try:
+            aliases = config.get('Users', user.lower()).split(' ')
+            aliases.pop(0)
+            irc.reply('Aliases: %s' % ', '.join(aliases))
+        except Exception, e:
+            log.error(str(e))
+            irc.error('No user with that name exists in my records.')
+    listalias = wrap(listaliases, ['something'])
+    listaliases = wrap(listaliases, ['something'])
 
     def nickSnarfer(self, irc, msg, match):
         r'(.*)'
