@@ -27,6 +27,13 @@ class XMPP(callbacks.PluginRegexp):
         if password and irc.isChannel(msg.args[0]):
             raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
 
+    def touchopen(self, filename, *args, **kwargs):
+        # Open the file in R/W and create if it doesn't exist. *Don't* pass O_TRUNC
+        fd = os.open(filename, os.O_RDWR | os.O_CREAT)
+
+        # Encapsulate the low-level file descriptor in a python file object
+        return os.fdopen(fd, *args, **kwargs)
+
     def setemail(self, irc, msg, args, user, otheruser, email):
         """(<user>) <email>
         Set the email for your account. Note: You must be registered with me in
@@ -47,7 +54,7 @@ class XMPP(callbacks.PluginRegexp):
             # if irc.isChannel(msg.args[0]):
             #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
             try:
-                with open(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
+                with self.touchopen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
                     config = ConfigParser.ConfigParser()
                     config.readfp(fp)
                     aliases = []
@@ -74,48 +81,7 @@ class XMPP(callbacks.PluginRegexp):
                 irc.reply("Error: Invalid email")
 
     setemail = wrap(setemail, ['user', optional('otherUser'), 'something'])
-    # JSON Implementation
-        # ('matches', re.compile(r'[A-Za-z0-9\.\+_-]+[A-Za-z0-9\._-]+\.[a-zA-Z]*'), 'Invalid Email')
-        # def gchat(self, irc, msg, args, user, email):
-        #     """<email>
-        #     Set the email for your account. Note: You must be registered with me in
-        #     order to run this command.
-        #     """
-        #     email = self.emailRegex.match(email)
-        #     if email is not None:
-        #         email = email.group(0)
-        #         if irc.isChannel(msg.args[0]):
-        #             raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
-        #         try:
-        #             with open(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
-        #                 config = json.load(fp)
-        #                 log.info(str(config))
-        #                 #test = [user2 for user2 in config]
-        #                 #test = unicode(user.name.lower(),'unicode-escape') in test
-        #                 username = user.name.lower()
-        #                 log.info(str(username in config))
-        #                 aliases = []
-        #                 if username in config and config[username] is list and len(config[username]) > 0:
-        #                     aliases = config[username].pop(0) # {"colton": ["frostyfrog2@gmail.com", "c2e"]}
-        #                 aliases.insert(0, email)
-        #                 config[username] = aliases
-        #                 #log.info(unicode(user.name,'unicode-escape'))
-        #                 log.info(str(config))
-        #                 # email = json.loads
-        #                 #config.set('Users', msg.nick, email)
-        #                 fp.truncate()
-        #                 fp.seek(0)
-        #                 json.dump(config, fp)
-        #                 fp.truncate()
-        #                 #fp.write()
-        #                 fp.close()
-        #                 irc.replySuccess()
-        #         except Exception, e:
-        #             log.error(str(e)) # log.error(str(traceback.print_tb(sys.exc_info()[2])))
-        #             irc.replyError("Error: Failed to save your email to the config file.")
-        #     elif email is None:
-        #         irc.reply("Error: invalid email")
-        # gchat = wrap(gchat, ['user', 'something'])
+
 
     def addAlias(self, irc, msg, origuser, user, alias, config):
         if not config.has_section('Users'):
@@ -187,7 +153,7 @@ class XMPP(callbacks.PluginRegexp):
         # if irc.isChannel(msg.args[0]):
         #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
         try:
-            with open(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
+            with touchopen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
                 config = ConfigParser.ConfigParser()
                 config.readfp(fp)
                 if alias[0] == '-':
@@ -205,6 +171,10 @@ class XMPP(callbacks.PluginRegexp):
                 fp.truncate()
                 fp.close()
         except Exception, e:
+            if type(e) == ConfigParser.NoOptionError:
+                irc.reply("Error: You need to set your email first with the \"%ssetemail <email>\" command..." % conf.supybot.reply.whenAddressedBy.chars())
+                log.error('%s tried to set an alias when they didn\'t have an email set' % user.name)
+                return
             log.error(str(e)) # log.error(str(traceback.print_tb(sys.exc_info()[2])))
             irc.replyError("Error: Failed to save your alias to the config file.")
     alias = wrap(setalias, ['user', optional('otherUser'), 'something'])
