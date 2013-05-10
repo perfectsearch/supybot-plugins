@@ -61,7 +61,7 @@ class XMPP(callbacks.PluginRegexp):
                     if not config.has_section('Users'):
                         config.add_section('Users')
                     if config.has_option('Users', tmpUser.name):
-                        aliases = re.findall(r"[\S]+", config.get('Users', tmpUser.name))
+                        aliases = config.get('Users', tmpUser.name).split(" ")
                         if not not aliases:
                             aliases.pop(0)
                     config.set('Users', tmpUser.name, email + " " + " ".join(aliases))
@@ -99,7 +99,7 @@ class XMPP(callbacks.PluginRegexp):
                 return False
             irc.reply("Error: You already own that alias")
             return False
-        aliases = re.findall(r"[\S]+", config.get('Users', user.name))
+        aliases = config.get('Users', user.name).split(" ")
         if alias in aliases:
              # We should never reach here
             return False
@@ -153,13 +153,13 @@ class XMPP(callbacks.PluginRegexp):
         # if irc.isChannel(msg.args[0]):
         #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
         try:
-            with touchOpen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
+            with self.touchOpen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
                 config = ConfigParser.ConfigParser()
                 config.readfp(fp)
                 if alias[0] == '-':
                     result = self.removeAlias(irc, msg, user, tmpUser, alias[1:], config)
                 else:
-                    result = self.addAlias(irc, msg, user, tmpUser, alias, config)
+                    result = self.addAlias(irc, msg, user, tmpUser, alias.lower(), config)
                 if not result:
                     fp.close()
                     return
@@ -217,7 +217,7 @@ class XMPP(callbacks.PluginRegexp):
             return alias
         names = config.options('Users')
         for name in names:
-            aliases = re.findall(r"[\S]+", config.get('Users', name))
+            aliases = config.get('Users', name).split(" ")
             if alias in aliases:
                 return name
         return False
@@ -286,7 +286,7 @@ class XMPP(callbacks.PluginRegexp):
         tmp = config.options('Users')
         users = tmp[:]
         for name in tmp:
-            aliases = re.findall(r"[\S]+", config.get('Users', name))
+            aliases = config.get('Users', name).split(" ")
             aliases.pop(0)
             users.extend(aliases)
         message = match.group(0).lower()
