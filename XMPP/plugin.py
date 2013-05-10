@@ -249,7 +249,10 @@ class XMPP(callbacks.PluginRegexp):
         if not config.has_section('Users'):
             config.add_section('Users')
         users = config.options('Users')
-        irc.reply('Users: %s' % ', '.join(users))
+        if users:
+            irc.reply('Users: %s' % ', '.join(users))
+        else:
+            irc.reply('Error: No users found.')
     listusers = wrap(listusers)
 
     def listaliases(self, irc, msg, args, user):
@@ -265,7 +268,10 @@ class XMPP(callbacks.PluginRegexp):
         try:
             aliases = config.get('Users', user.lower()).split(' ')
             aliases.pop(0)
-            irc.reply('Aliases: %s' % ', '.join(aliases))
+            if aliases:
+                irc.reply('Aliases: %s' % ', '.join(aliases))
+            else:
+                irc.reply('Error: No aliases found for %s.' % user)
         except Exception, e:
             log.error(str(e))
             irc.error('No user with that name exists in my records.')
@@ -290,19 +296,24 @@ class XMPP(callbacks.PluginRegexp):
             aliases.pop(0)
             users.extend(aliases)
         message = match.group(0).lower()
-        calledNicks = []
+        calledNicks = {}
         for key in users:
             nick = findWord(key)(message)
             # if nick:
             #     log.info(str(key)+" "+self.aliasExists(nick.group(0), config))
             if nick and not self.aliasExists(nick.group(0), config) in irc.state.channels[channel].users and not self.aliasExists(nick.group(0), config) in calledNicks:
-                calledNicks.append(self.aliasExists(nick.group(0), config))
                 # log.info(str(calledNicks))
                 message2 = "%s.%s: %s" % (msg.nick, msg.args[0], msg.args[1])
-                self.sendEmail(irc, msg.nick, key, message2)
+                calledNicks[self.aliasExists(nick.group(0), config)] = self.sendEmail(irc, msg.nick, key, message2)
                 #log.info(r'\\o/')
-        if calledNicks:
-            irc.reply('Notified %s' % ', '.join(calledNicks), prefixNick=False)
+        users = []
+        for nick, passed in calledNicks.iteritems():
+            # log.info(str((nick,passed)))
+            if passed == 0:
+                users.append(nick)
+        if users:
+            users.sort()
+            irc.reply('Notified %s' % ', '.join(users), prefixNick=False)
     nickSnarfer = urlSnarfer(nickSnarfer)
 
     def sendEmail(self, irc, suser, duser, message):
