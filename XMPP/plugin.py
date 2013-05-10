@@ -27,7 +27,7 @@ class XMPP(callbacks.PluginRegexp):
         if password and irc.isChannel(msg.args[0]):
             raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
 
-    def touchopen(self, filename, *args, **kwargs):
+    def touchOpen(self, filename, *args, **kwargs):
         # Open the file in R/W and create if it doesn't exist. *Don't* pass O_TRUNC
         fd = os.open(filename, os.O_RDWR | os.O_CREAT)
 
@@ -54,7 +54,7 @@ class XMPP(callbacks.PluginRegexp):
             # if irc.isChannel(msg.args[0]):
             #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
             try:
-                with self.touchopen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
+                with self.touchOpen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
                     config = ConfigParser.ConfigParser()
                     config.readfp(fp)
                     aliases = []
@@ -153,7 +153,7 @@ class XMPP(callbacks.PluginRegexp):
         # if irc.isChannel(msg.args[0]):
         #     raise callbacks.Error, conf.supybot.replies.requiresPrivacy()
         try:
-            with touchopen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
+            with touchOpen(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'), 'r+') as fp:
                 config = ConfigParser.ConfigParser()
                 config.readfp(fp)
                 if alias[0] == '-':
@@ -222,7 +222,7 @@ class XMPP(callbacks.PluginRegexp):
                 return name
         return False
 
-    def gchattest(self, irc, msg, args, user, message):
+    def sendmessage(self, irc, msg, args, user, message):
         """<user> <Message>
         Send a <Message> to <user>
         """
@@ -236,8 +236,8 @@ class XMPP(callbacks.PluginRegexp):
             irc.reply("Error: Failed to send IM, User has not set their email address", prefixNick=False)
         elif status > 1:
             irc.replyError('Connection error: please try again in a few minutes.');
-    message = wrap(gchattest, ['otherUser', 'text'])
-    msg = wrap(gchattest, ['otherUser', 'text'])
+    message = wrap(sendmessage, ['otherUser', 'text'])
+    msg = wrap(sendmessage, ['otherUser', 'text'])
 
     def listusers(self, irc, msg, args):
         """
