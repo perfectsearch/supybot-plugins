@@ -87,17 +87,18 @@ class XMPP(callbacks.PluginRegexp):
         if not config.has_section('Users'):
             config.add_section('Users')
         atest = self.aliasExists(alias, config)
-        if atest and atest != user.name:
+        if atest and atest != user.name.lower():
             if atest == alias:
-                irc.reply("Error: You can not have an alias that is the name of a user.")
+                irc.reply("You can not have an alias that is the name of a user.")
                 return False
-            irc.reply("Error: %s already owns %s" % (atest,alias))
+            irc.reply("%s already owns %s" % (atest,alias))
             return False
         elif atest:
             if atest == alias:
-                irc.reply("Error: Why are you trying to have an alias that is your name?")
+                irc.reply("Why are you trying to have an alias that is your name?")
                 return False
-            irc.reply("Error: You already own that alias")
+            # irc.reply("Error: You already own that alias")
+            irc.reply("Your aliases: %s" % ", ".join(aliases))
             return False
         aliases = config.get('Users', user.name).split(" ")
         if alias in aliases:
