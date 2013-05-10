@@ -15,7 +15,7 @@ def configure(advanced):
     # user or not.  You should effect your configuration by manipulating the
     # registry as appropriate.
     from supybot.questions import expect, anything, something, yn
-    conf.registerPlugin('XMPP', True)
+    conf.registerPlugin('XMPP', True, True)
 
 
 class emailChecker(registry.String):
