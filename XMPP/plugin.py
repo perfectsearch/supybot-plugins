@@ -211,6 +211,7 @@ class XMPP(callbacks.PluginRegexp):
 
     def tellall(self, irc, msg, args, autheduser, message):
         if not (self.registryValue('telleveryone') or autheduser._checkCapability('owner')):
+            irc.reply("I'm sorry, but this command is currently disabled...")
             return
         config = ConfigParser.ConfigParser()
         config.read(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'))
@@ -304,10 +305,10 @@ class XMPP(callbacks.PluginRegexp):
     def nickSnarfer(self, irc, msg, match):
         r'(.*)'
         channel = msg.args[0]
-        def findWord(w):
-            return re.compile(r'\b({0})\b'.format(w), flags=re.I).search
         if(msg.nick.lower().endswith('bot') or not irc.isChannel(channel) or not self.registryValue('nickSnarfer', channel) or msg.args[1].startswith(conf.supybot.reply.whenAddressedBy.chars())):
             return
+        def findWord(w):
+            return re.compile(r'\b({0})\b'.format(w), flags=re.I).search
         config = ConfigParser.ConfigParser()
         config.read(os.path.join(conf.supybot.directories.conf(), 'xmpp.conf'))
         if not config.has_section('Users'):
@@ -332,10 +333,6 @@ class XMPP(callbacks.PluginRegexp):
                 #log.info(r'\\o/')
         if calledNicks:
             irc.reply('Notified %s' % ', '.join(calledNicks), prefixNick=False)
-
-        # users = '|'.join(arr)
-        # if not self.registryValue('ticketSnarfer', channel):
-        #     returnl
     nickSnarfer = urlSnarfer(nickSnarfer)
 
     def sendEmail(self, irc, suser, duser, message):
