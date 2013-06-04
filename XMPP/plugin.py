@@ -80,7 +80,7 @@ class XMPP(callbacks.PluginRegexp):
             else:
                 irc.reply("Error: Invalid email")
 
-    setemail = wrap(setemail, ['user', optional('otherUser'), 'something'])
+    gchatemail = wrap(setemail, ['user', optional('otherUser'), 'something'])
 
 
     def addAlias(self, irc, msg, origuser, user, alias, config):
@@ -178,7 +178,7 @@ class XMPP(callbacks.PluginRegexp):
                 return
             log.error(str(e)) # log.error(str(traceback.print_tb(sys.exc_info()[2])))
             irc.replyError("Error: Failed to save your alias to the config file.")
-    alias = wrap(setalias, ['user', optional('otherUser'), 'something'])
+    gchatalias = wrap(setalias, ['user', optional('otherUser'), 'something'])
 
     def tellall(self, irc, msg, args, autheduser, message):
         if not (self.registryValue('telleveryone') or autheduser._checkCapability('owner')):
@@ -208,7 +208,7 @@ class XMPP(callbacks.PluginRegexp):
                 irc.reply("Your message has been successfully sent to everyone!")
         else:
             irc.replyError()
-    tellall = wrap(tellall, ['user', 'text'])
+    gchattellall = wrap(tellall, ['user', 'text'])
 
     def aliasExists(self, alias, config):
         if not config.has_section('Users'):
@@ -237,8 +237,8 @@ class XMPP(callbacks.PluginRegexp):
             irc.reply("Error: Failed to send IM, User has not set their email address", prefixNick=False)
         elif status > 1:
             irc.replyError('Connection error: please try again in a few minutes.');
-    message = wrap(sendmessage, ['otherUser', 'text'])
-    msg = wrap(sendmessage, ['otherUser', 'text'])
+    gchatmessage = wrap(sendmessage, ['otherUser', 'text'])
+    gchatmsg = wrap(sendmessage, ['otherUser', 'text'])
 
     def listusers(self, irc, msg, args):
         """
@@ -254,7 +254,7 @@ class XMPP(callbacks.PluginRegexp):
             irc.reply('Users: %s' % ', '.join(users))
         else:
             irc.reply('Error: No users found.')
-    listusers = wrap(listusers)
+    gchatlistusers = wrap(listusers)
 
     def listaliases(self, irc, msg, args, user):
         """<user>
@@ -276,8 +276,7 @@ class XMPP(callbacks.PluginRegexp):
         except Exception, e:
             log.error(str(e))
             irc.error('No user with that name exists in my records.')
-    listalias = wrap(listaliases, ['something'])
-    listaliases = wrap(listaliases, ['something'])
+    gchatlist = wrap(listaliases, ['something'])
 
     def nickSnarfer(self, irc, msg, match):
         r'(.*)'
