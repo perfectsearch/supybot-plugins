@@ -26,6 +26,8 @@ class Assembla(callbacks.PluginRegexp):
     def __init__(self, irc):
         self.__parent = super(Assembla, self)
         self.__parent.__init__(irc)
+
+        self.assemblaSpace = 'ps-share'
         self.space = None
 
     def getConfig(self, irc):
@@ -39,7 +41,7 @@ class Assembla(callbacks.PluginRegexp):
                 irc.reply('Debug: %s' % self.space, prefixNick=False)
             try:
                 for json in self.space:
-                    if json[u'name'] == 'ps-share':
+                    if json[u'name'] == self.assemblaSpace:
                         self.space = json[u'id']
             except TypeError:
                 irc.reply('Error: Could not get the Assembla space!')
@@ -114,6 +116,13 @@ class Assembla(callbacks.PluginRegexp):
             else:
                 irc.reply("Failed to retrieve ticket #%s" % ticketID)
     ticket = wrap(ticket, ['anything'])
+
+    def ticketurl(self, irc, msg, args, ticketID):
+        ticketID = int(self.ticketRegex.match(ticketID).group(1))
+        irc.reply("URL for ticket #%d:
+                https://www.assembla.com/spaces/%s/tickets/%d" % (ticketID,
+                    self.assemblaSpace, ticketID))
+    ticketurl = wrap(ticketurl, ['anything'])
 
     def webSnarfer(self, irc, msg, match):
         r'#([0-9]+)'
