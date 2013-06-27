@@ -27,22 +27,24 @@ class Assembla(callbacks.PluginRegexp):
         self.__parent = super(Assembla, self)
         self.__parent.__init__(irc)
         self.space = None
+        self.spaceName = None
 
     def getConfig(self, irc):
         if self.space is not None:
             return
         self.key = self.registryValue('apiKey', value='')
         self.secret = self.registryValue('apiSecret', value='')
+        self.spaceName = self.registryValue('space', value='example')
         self.space = self.getAPI(irc, 'spaces.json')
         if self.space:
             if self.registryValue('debug'):
                 irc.reply('Debug: %s' % self.space, prefixNick=False)
             try:
                 for json in self.space:
-                    if json[u'name'] == 'ps-share':
+                    if json[u'name'] == self.spaceName:
                         self.space = json[u'id']
             except TypeError:
-                irc.reply('Error: Could not get the Assembla space!')
+                irc.reply('Error: Could not get the "%s" Assembla space!' % self.spaceName)
                 log.error('%s\n' % (response))
                 self.spaces = None
         else:
@@ -111,6 +113,8 @@ class Assembla(callbacks.PluginRegexp):
             if ticket is not False:
                 message = 'Assembla Ticket #%d, %s [%s - %d]' % (ticketID, ticket[u'summary'], ticket[u'status'], ticket[u'priority'])
                 irc.reply(message)
+                if self.registryValue('urlGen'):
+                    irc.reply('https://www.assembla.com/spaces/%s/tickets/%d' % (self.spaceName, ticketID))
             else:
                 irc.reply("Failed to retrieve ticket #%s" % ticketID)
     ticket = wrap(ticket, ['anything'])
@@ -153,6 +157,8 @@ class Assembla(callbacks.PluginRegexp):
             if ticket is not False:
                 message = 'Assembla Ticket #%d, %s [%s - %d]' % (ticketID, ticket[u'summary'], ticket[u'status'], ticket[u'priority'])
                 irc.reply(message, prefixNick=False)
+                if self.registryValue('urlGen'):
+                    irc.reply('https://www.assembla.com/spaces/%s/tickets/%d' % (self.spaceName, ticketID), prefixNick=False)
             else:
                 irc.reply("Failed to retrieve ticket #%s" % ticketID, prefixNick=False)
 
